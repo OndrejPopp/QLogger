@@ -38,7 +38,7 @@ bool QLoggerManager::addDestination(const QString &fileDest, const QString &modu
    {
       const auto log = createWriter(fileDest, level, fileFolderDestination, mode, fileSuffixIfFull, messageOptions);
 
-      mModuleDest.insert(module, log);
+      mModuleDest.insert(module, QScopedPointer<QLoggerWriter>(log));
 
       startWriter(module, log, mode, notify);
 
@@ -61,7 +61,7 @@ bool QLoggerManager::addDestination(const QString &fileDest, const QStringList &
       {
          const auto log = createWriter(fileDest, level, fileFolderDestination, mode, fileSuffixIfFull, messageOptions);
 
-         mModuleDest.insert(module, log);
+         mModuleDest.insert(module, QScopedPointer<QLoggerWriter>(log));
 
          startWriter(module, log, mode, notify);
 
@@ -70,6 +70,66 @@ bool QLoggerManager::addDestination(const QString &fileDest, const QStringList &
    }
 
    return allAdded;
+}
+
+bool QLoggerManager::addDestination(const QString &module, const QLoggerDestinationConfig &config, bool notify)
+{
+   QMutexLocker lock(&mMutex);
+
+   if (!mModuleDest.contains(module))
+   {
+      const auto log = createWriter(config);
+
+      mModuleDest.insert(module, QScopedPointer<QLoggerWriter>(log));
+
+      startWriter(module, log, config.mode, notify);
+
+      return true;
+   }
+
+   return false;
+}
+
+bool QLoggerManager::addDestination(const QStringList &modules, const QLoggerDestinationConfig &config, bool notify)
+{
+   QMutexLocker lock(&mMutex);
+   bool allAdded = false;
+
+   for (const auto &module : modules)
+   {
+      if (!mModuleDest.contains(module))
+      {
+         const auto log = createWriter(config);
+
+         mModuleDest.insert(module, QScopedPointer<QLoggerWriter>(log));
+
+         startWriter(module, log, config.mode, notify);
+
+         allAdded = true;
+      }
+   }
+
+   return allAdded;
+}
+
+QLoggerWriter *QLoggerManager::createWriter(QLoggerDestinationConfig config) const
+{
+   if (!config.isValid())
+   {
+      config.fileDestination = mDefaultFileDestination;
+      config.level = mDefaultLevel;
+      config.fileFolderDestination = mDefaultFileDestinationFolder;
+      config.mode = mDefaultMode;
+      config.fileSuffixIfFull = mDefaultFileSuffixIfFull;
+      config.messageOptions = mDefaultMessageOptions;
+   }
+
+   const auto log = new QLoggerWriter(config);
+
+   log->setMaxFileSize(mDefaultMaxFileSize);
+   log->stop(mIsStop);
+
+   return log;
 }
 
 QLoggerWriter *QLoggerManager::createWriter(const QString &fileDest, LogLevel level,
@@ -88,7 +148,7 @@ QLoggerWriter *QLoggerManager::createWriter(const QString &fileDest, LogLevel le
        = messageOptions.testFlag(LogMessageDisplay::Default) ? mDefaultMessageOptions : messageOptions;
 
    const auto log
-       = new QLoggerWriter(lFileDest, lLevel, lFileFolderDestination, lMode, lFileSuffixIfFull, lMessageOptions);
+       = new QLoggerWriter({ lFileDest, lLevel, lFileFolderDestination, lMode, lFileSuffixIfFull, lMessageOptions });
 
    log->setMaxFileSize(mDefaultMaxFileSize);
    log->stop(mIsStop);
@@ -139,9 +199,10 @@ void QLoggerManager::writeAndDequeueMessages(const QString &module)
 {
    QMutexLocker lock(&mMutex);
 
-   const auto logWriter = mModuleDest.value(module, Q_NULLPTR);
+   const auto logWriter = mModuleDest.constFind(module);
+   const auto logWriterFound = logWriter != mModuleDest.constEnd();
 
-   if (logWriter && !logWriter->isStop())
+   if (logWriterFound && !logWriter->data()->isStop())
    {
       const auto values = mNonWriterQueue.values(module);
 
@@ -149,7 +210,7 @@ void QLoggerManager::writeAndDequeueMessages(const QString &module)
       {
          const auto level = qvariant_cast<LogLevel>(values.at(2).toInt());
 
-         if (logWriter->getLevel() <= level)
+         if (logWriter->data()->getLevel() <= level)
          {
             const auto datetime = values.at(0).toDateTime();
             const auto threadId = values.at(1).toString();
@@ -158,7 +219,7 @@ void QLoggerManager::writeAndDequeueMessages(const QString &module)
             const auto line = values.at(5).toInt();
             const auto message = values.at(6).toString();
 
-            logWriter->enqueue(datetime, threadId, module, level, function, file, line, message);
+            logWriter->data()->enqueue(datetime, threadId, module, level, function, file, line, message);
          }
       }
 
@@ -172,16 +233,19 @@ void QLoggerManager::enqueueMessage(const QString &module, LogLevel level, const
    QMutexLocker lock(&mMutex);
    const auto threadId = QString("%1").arg((quintptr)QThread::currentThread(), QT_POINTER_SIZE * 2, 16, QChar('0'));
    const auto fileName = file.mid(file.lastIndexOf('/') + 1);
-   const auto logWriter = mModuleDest.value(module, Q_NULLPTR);
-   const auto isLogEnabled = logWriter && logWriter->getMode() != LogMode::Disabled && !logWriter->isStop();
+   const auto logWriter = mModuleDest.constFind(module);
+   const auto logWriterFound = logWriter != mModuleDest.constEnd();
+   const auto isLogEnabled
+       = logWriterFound && logWriter->data()->getMode() != LogMode::Disabled && !logWriter->data()->isStop();
 
-   if (isLogEnabled && logWriter->getLevel() <= level)
+   if (isLogEnabled && logWriter->data()->getLevel() <= level)
    {
       writeAndDequeueMessages(module);
 
-      logWriter->enqueue(QDateTime::currentDateTime(), threadId, module, level, function, fileName, line, message);
+      logWriter->data()->enqueue(QDateTime::currentDateTime(), threadId, module, level, function, fileName, line,
+                                 message);
    }
-   else if (!logWriter && mNonWriterQueue.count(module) < QUEUE_LIMIT)
+   else if (!logWriterFound && mNonWriterQueue.count(module) < QUEUE_LIMIT)
    {
       mNonWriterQueue.insert(module,
                              { QDateTime::currentDateTime(), threadId, QVariant::fromValue<LogLevel>(level), function,
@@ -246,14 +310,11 @@ QLoggerManager::~QLoggerManager()
    for (const auto &dest : mModuleDest.toStdMap())
       writeAndDequeueMessages(dest.first);
 
-   for (auto dest : qAsConst(mModuleDest))
+   for (const auto &dest : qAsConst(mModuleDest))
    {
       dest->closeDestination();
       dest->wait();
    }
-
-   for (auto dest : qAsConst(mModuleDest))
-      delete dest;
 
    mModuleDest.clear();
 }

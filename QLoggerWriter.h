@@ -22,7 +22,7 @@
  ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************************************/
 
-#include <QLoggerLevel.h>
+#include <QLoggerDestinationConfig.h>
 
 #include <QThread>
 #include <QWaitCondition>
@@ -46,25 +46,13 @@ public:
     * @param mode The logging mode.
     * @param fileSuffixIfFull The filename suffix if the file is full.
     */
-   explicit QLoggerWriter(const QString &fileDestination, LogLevel level = LogLevel::Warning,
-                          const QString &fileFolderDestination = QString(), LogMode mode = LogMode::OnlyFile,
-                          LogFileDisplay fileSuffixIfFull = LogFileDisplay::DateTime,
-                          LogMessageDisplays messageOptions = LogMessageDisplay::Default);
-
-   /**
-    * @brief Gets path and folder of the file that will store the logs.
-    */
-   QString getFileDestinationFolder() const { return mFileDestinationFolder; }
-   /**
-    * @brief Path and name of the file that will store the logs.
-    */
-   QString getFileDestination() const { return mFileDestination; }
+   explicit QLoggerWriter(const QLoggerDestinationConfig &config);
 
    /**
     * @brief Gets the current logging mode.
     * @return The level.
     */
-   LogMode getMode() const { return mMode; }
+   LogMode getMode() const { return mConfig.mode; }
 
    /**
     * @brief setLogMode Sets the log mode for this destination.
@@ -76,37 +64,19 @@ public:
     * @brief Gets the current level threshold.
     * @return The level.
     */
-   LogLevel getLevel() const { return mLevel; }
+   LogLevel getLevel() const { return mConfig.level; }
 
    /**
     * @brief setLogLevel Sets the log level for this destination.
     * @param level The new level threshold.
     */
-   void setLogLevel(LogLevel level) { mLevel = level; }
-
-   /**
-    * @brief Gets the current max size for the log file.
-    * @return The maximum size
-    */
-   int getMaxFileSize() const { return mMaxFileSize; }
+   void setLogLevel(LogLevel level) { mConfig.level = level; }
 
    /**
     * @brief setMaxFileSize Sets the max file size for this destination.
     * @param maxSize The new file size
     */
    void setMaxFileSize(int maxSize) { mMaxFileSize = maxSize; }
-
-   /**
-    * @brief getMessageOptions Gets the current message options.
-    * @return The current options
-    */
-   LogMessageDisplays getMessageOptions() const { return mMessageOptions; }
-
-   /**
-    * @brief setMessageOptions Specifies what elements are displayed in one line of log message.
-    * @param messageOptions The options
-    */
-   void setMessageOptions(LogMessageDisplays messageOptions) { mMessageOptions = messageOptions; }
 
    /**
     * @brief enqueue Enqueues a message to be written in the destiantion.
@@ -151,16 +121,11 @@ private:
       QString message;
    };
 
+   QWaitCondition mQueueNotEmpty;
    bool mQuit = false;
    bool mIsStop = false;
-   QWaitCondition mQueueNotEmpty;
-   QString mFileDestinationFolder;
-   QString mFileDestination;
-   LogFileDisplay mFileSuffixIfFull;
-   LogMode mMode;
-   LogLevel mLevel;
+   QLoggerDestinationConfig mConfig {};
    int mMaxFileSize = 1024 * 1024; //! @note 1Mio
-   LogMessageDisplays mMessageOptions;
    QVector<EnqueuedMessage> messages;
    QMutex mutex;
 

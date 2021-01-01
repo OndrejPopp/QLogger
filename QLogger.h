@@ -22,7 +22,7 @@
  ** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  ***************************************************************************************/
 
-#include <QLoggerLevel.h>
+#include <QLoggerDestinationConfig.h>
 
 #include <QMutex>
 #include <QMap>
@@ -52,14 +52,15 @@ public:
     * more than one file.
     *
     * @param fileDest The file name and path to print logs.
-    * @param module The module that will be stored in the file.
+    * @param module The module that will log into the destination.
     * @param level The maximum level allowed.
     * @param fileFolderDestination The complete folder destination.
     * @param mode The logging mode.
     * @param fileSuffixIfFull The filename suffix if the file is full.
     * @param messageOptions Specifies what elements are displayed in one line of log message.
-    * @return Returns true if any error have been done.
+    * @return Returns true if sueccessful, otherwise false.
     */
+   QT_DEPRECATED_X("Use addDestination(const QString&, const QLoggerDestinationConfig&, bool) instead")
    bool addDestination(const QString &fileDest, const QString &module, LogLevel level = LogLevel::Warning,
                        const QString &fileFolderDestination = QString(), LogMode mode = LogMode::OnlyFile,
                        LogFileDisplay fileSuffixIfFull = LogFileDisplay::DateTime,
@@ -71,18 +72,44 @@ public:
     * more than one file.
     *
     * @param fileDest The file name and path to print logs.
-    * @param modules The modules that will be stored in the file.
+    * @param modules The modules that will log into the destination.
     * @param level The maximum level allowed.
     * @param fileFolderDestination The complete folder destination.
     * @param mode The logging mode.
     * @param fileSuffixIfFull The filename suffix if the file is full.
     * @param messageOptions Specifies what elements are displayed in one line of log message.
-    * @return Returns true if any error have been done.
+    * @return Returns true if sueccessful, otherwise false.
     */
+   QT_DEPRECATED_X("Use addDestination(const QString&, const QLoggerDestinationConfig&, bool) instead")
    bool addDestination(const QString &fileDest, const QStringList &modules, LogLevel level = LogLevel::Warning,
                        const QString &fileFolderDestination = QString(), LogMode mode = LogMode::OnlyFile,
                        LogFileDisplay fileSuffixIfFull = LogFileDisplay::DateTime,
                        LogMessageDisplays messageOptions = LogMessageDisplay::Default, bool notify = true);
+
+   /**
+    * @brief addDestination This method creates a QLoogerWriter that stores the name of the file and the log
+    * level assigned to it. Here is added to the map the different modules assigned to each
+    * log file. The method returns <em>false</em> if a module is configured to be stored in
+    * more than one file.
+    * @param module The module that will log into the destination.
+    * @param config The configuration for the module.
+    * @param notify If true, prints the log trace to inform that this module was added.
+    * @return Returns true if sueccessful, otherwise false.
+    */
+   bool addDestination(const QString &module, const QLoggerDestinationConfig &config, bool notify = true);
+
+   /**
+    * @brief addDestination This method creates a QLoogerWriter that stores the name of the file and the log
+    * level assigned to it. Here is added to the map the different modules assigned to each
+    * log file. The method returns <em>false</em> if a module is configured to be stored in
+    * more than one file.
+    * @param modules The list of modules that will log into the destination.
+    * @param config The configuration for the module.
+    * @param notify If true, prints the log trace to inform that this module was added.
+    * @return Returns true if sueccessful, otherwise false.
+    */
+   bool addDestination(const QStringList &modules, const QLoggerDestinationConfig &config, bool notify = true);
+
    /**
     * @brief Clears old log files from the current storage folder.
     *
@@ -177,7 +204,7 @@ private:
    /**
     * @brief Map that stores the module and the file it is assigned.
     */
-   QMap<QString, QLoggerWriter *> mModuleDest;
+   QMap<QString, QScopedPointer<QLoggerWriter>> mModuleDest;
 
    /**
     * @brief Defines the queue of messages when no writters have been set yet.
@@ -223,6 +250,8 @@ private:
     */
    QLoggerWriter *createWriter(const QString &fileDest, LogLevel level, const QString &fileFolderDestination,
                                LogMode mode, LogFileDisplay fileSuffixIfFull, LogMessageDisplays messageOptions) const;
+
+   QLoggerWriter *createWriter(QLoggerDestinationConfig config) const;
 
    void startWriter(const QString &module, QLoggerWriter *log, LogMode mode, bool notify);
 
