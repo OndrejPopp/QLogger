@@ -41,18 +41,28 @@ public:
     * @brief Constructor that gets the complete path and filename to create the file. It also
     * configures the level of this file to filter the logs depending on the level.
     * @param fileDestination The complete path.
-    * @param level The maximum level that is allowed.
     * @param fileFolderDestination The complete folder destination.
+    * @param the date time format, default is yyyy-MM-ddThh:mm:ss.
+    * @param level The maximum level that is allowed.
     * @param mode The logging mode.
     * @param fileTag The file tag.
     * @param fileHandling file handling modes
     * @param messageOptions Specifies what elements are displayed in one line of log message.
     */
-   explicit QLoggerWriter(const QString &fileDestination, LogLevel level = LogLevel::Warning,
-                          const QString &fileFolderDestination = QString(), LogMode mode = LogMode::Default,
+   explicit QLoggerWriter(const QString &fileDestination, const QString &fileFolderDestination = QString(),
+                          const QString &dateTimeFormat = QLoggerWriter::defaultDateTimeFormat(),
+                          LogLevel level = LogLevel::Warning, LogMode mode = LogMode::Default,
                           LogFileTag fileTag = LogFileTag::Default,
                           LogFileHandling fileHandling = LogFileHandling::Default,
                           LogMessageDisplays messageOptions = LogMessageDisplay::Default);
+
+    /**
+     * @brief the default date time format
+     */
+    static const QString defaultDateTimeFormat()
+    {
+        return "yyyy-MM-ddThh:mm:ss";
+    }
 
    /**
     * @brief Gets path and folder of the file that will store the logs.
@@ -154,6 +164,7 @@ private:
    QWaitCondition mQueueNotEmpty;
    QString mFileDestinationFolder;
    QString mBareFileDestination;
+   QString mDateFormat; 
    QString mDateTag; 
    LogFileTag mFileTag;
    LogFileHandling mFileHandling;
@@ -167,6 +178,7 @@ private:
    /**
     * @brief generates a date tag
     */
+   QString mkDateTag(const QString& dateFormat) const;
    QString mkDateTag() const;
 
    /**

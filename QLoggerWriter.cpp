@@ -38,9 +38,11 @@ QString levelToText(const QLogger::LogLevel &level)
 namespace QLogger
 {
 
-QLoggerWriter::QLoggerWriter(const QString &fileDestination, LogLevel level, const QString &fileFolderDestination,
-                             LogMode mode, LogFileTag fileTag, LogFileHandling fileHandling, LogMessageDisplays messageOptions)
-   : mDateTag(mkDateTag())
+QLoggerWriter::QLoggerWriter(const QString &fileDestination, const QString &fileFolderDestination,
+                             const QString &dateTimeFormat,
+                             LogLevel level, LogMode mode, LogFileTag fileTag, LogFileHandling fileHandling, LogMessageDisplays messageOptions)
+   : mDateFormat(dateTimeFormat)
+   , mDateTag(mkDateTag(dateTimeFormat))
    , mFileTag(fileTag)
    , mFileHandling(fileHandling)
    , mMode(mode)
@@ -81,9 +83,14 @@ void QLoggerWriter::setLogMode(LogMode mode)
       start();
 }
 
+QString QLoggerWriter::mkDateTag(const QString& dateFormat) const
+{
+   return QDateTime::currentDateTime().toString(dateFormat);
+}
+
 QString QLoggerWriter::mkDateTag() const
 {
-   return QDateTime::currentDateTime().toString("dd_MM_yy__hh_mm_ss");
+   return mkDateTag(mDateFormat);
 }
 
 QString QLoggerWriter::getTaggedFileDestination(const QString& dateTag) const
@@ -92,7 +99,7 @@ QString QLoggerWriter::getTaggedFileDestination(const QString& dateTag) const
    const auto fileExtension = mBareFileDestination.mid(mBareFileDestination.lastIndexOf('.') + 1);
    
    if (mFileTag == LogFileTag::DateTime)
-      return QString("%1_%2.%3")
+      return QString("%1-%2.%3")
               .arg(baseDestination, dateTag, fileExtension);
    else
       return generateDuplicateFilename(baseDestination, fileExtension);
