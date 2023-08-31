@@ -97,7 +97,7 @@ QString QLoggerWriter::getTaggedFileDestination(const QString& dateTag) const
 {
    const auto baseDestination = mBareFileDestination.left(mBareFileDestination.lastIndexOf('.'));
    const auto fileExtension = mBareFileDestination.mid(mBareFileDestination.lastIndexOf('.') + 1);
-   
+
    if (mFileTag == LogFileTag::DateTime)
       return QString("%1-%2.%3")
               .arg(baseDestination, dateTag, fileExtension);
@@ -107,11 +107,11 @@ QString QLoggerWriter::getTaggedFileDestination(const QString& dateTag) const
 
 QString QLoggerWriter::getFileDestination() const
 {
-   return 
-    mFileHandling == LogFileHandling::SingleTagged 
+   return
+    mFileHandling == LogFileHandling::SingleTagged
     ? getTaggedFileDestination(mDateTag)
     : mBareFileDestination;
-}   
+}
 
 QString QLoggerWriter::renameFileIfFull()
 {
@@ -160,9 +160,9 @@ void QLoggerWriter::write(QVector<QString> messages)
 
    // Write data to file
    QFile file(getFileDestination());
-   
+
    QString prevFilename;
-   if (mFileHandling == LogFileHandling::Split) 
+   if (mFileHandling == LogFileHandling::Split)
        prevFilename = renameFileIfFull();
 
    if (file.open(QIODevice::ReadWrite | QIODevice::Text | QIODevice::Append))

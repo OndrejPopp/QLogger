@@ -70,7 +70,7 @@ enum class LogFileHandling
 {
     Single,        // single file, with original name
     SingleTagged,  // single file, with original name plus a tag according to LogFileTag
-    Split,         // keep original name but split on predefined file size with tag according to LogFileTag 
+    Split,         // keep original name but split on predefined file size with tag according to LogFileTag
     Default
 };
 

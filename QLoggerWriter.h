@@ -164,8 +164,8 @@ private:
    QWaitCondition mQueueNotEmpty;
    QString mFileDestinationFolder;
    QString mBareFileDestination;
-   QString mDateFormat; 
-   QString mDateTag; 
+   QString mDateFormat;
+   QString mDateTag;
    LogFileTag mFileTag;
    LogFileHandling mFileHandling;
    LogMode mMode;

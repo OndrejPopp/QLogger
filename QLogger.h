@@ -67,7 +67,7 @@ public:
    bool addDestination(const QString &fileDest, const QString &module, LogLevel level = LogLevel::Warning,
                        const QString &fileFolderDestination = QString(), LogMode mode = LogMode::Default,
                        LogFileTag fileTag = LogFileTag::Default,
-                       LogFileHandling fileHandling = LogFileHandling::Default, 
+                       LogFileHandling fileHandling = LogFileHandling::Default,
                        LogMessageDisplays messageOptions = LogMessageDisplay::Default, bool notify = true);
    /**
     * @brief This method creates a QLoggerWriter that stores the name of the file and the log
@@ -88,7 +88,7 @@ public:
    bool addDestination(const QString &fileDest, const QStringList &modules, LogLevel level = LogLevel::Warning,
                        const QString &fileFolderDestination = QString(), LogMode mode = LogMode::Default,
                        LogFileTag fileTag = LogFileTag::Default,
-                       LogFileHandling fileHandling = LogFileHandling::Default,  
+                       LogFileHandling fileHandling = LogFileHandling::Default,
                        LogMessageDisplays messageOptions = LogMessageDisplay::Default, bool notify = true);
    /**
     * @brief Clears old log files from the current storage folder.
